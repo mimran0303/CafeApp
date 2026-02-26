@@ -58,3 +58,33 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+.jumbotron-custom {
+    background: url("images/OfficialRobustaLogo.png") center;
+    background-size: cover;
+    width: 100%;
+    height: 50vh;
+    overflow: hidden;
+}
+
+
+.img-rounded {
+    border-radius: 50%;
+}
+
+span.nav-link {
+    color: #212529 !important;
+}
+
+
+
+span.nav-link.active {
+    border-bottom: 3px solid #198754;
+    color: #198754 !important;
+}
+
+
+
+.mark-up-string * {
+    background: transparent !important;
+}
