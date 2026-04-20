@@ -17,6 +17,7 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IShoppingCartRepository, ShoppingCartRepository>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
@@ -53,13 +54,17 @@ else
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
+
+    // Only enable HTTPS redirection in non-development environments where a certificate is configured.
+    app.UseHttpsRedirection();
 }
 
-app.UseHttpsRedirection();
-
-
+// In development, avoid forcing HTTPS if the developer certificate is missing/trusted incorrectly.
 app.UseAntiforgery();
 
+// Map static assets and enable static file middleware so files in wwwroot are served.
+// MapStaticAssets is a helper for Razor Components static assets; UseStaticFiles must be enabled for wwwroot files.
+app.UseStaticFiles();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
@@ -67,4 +72,5 @@ app.MapRazorComponents<App>()
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
 
-app.Run();
+    app.Run();
+

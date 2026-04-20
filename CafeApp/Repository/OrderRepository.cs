@@ -2,7 +2,7 @@
 using CafeApp.Repository.IRepository;
 using Microsoft.EntityFrameworkCore;
 
-namespace YumBlazor.Repository
+namespace CafeApp.Repository
 {
     public class OrderRepository : IOrderRepository
     {

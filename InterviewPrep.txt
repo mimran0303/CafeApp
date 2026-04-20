@@ -1,0 +1,148 @@
+CafeApp - Technical Interview Preparation
+==========================================
+
+HOW TO INTRODUCE THE PROJECT
+------------------------------
+"I built a full-stack cafe ordering application in ASP.NET Core 9 with Blazor Server. It includes a product catalog,
+shopping cart, order management, and a role-based admin dashboard. I used Entity Framework Core with a Repository
+Pattern for data access and ASP.NET Core Identity for authentication."
+
+
+C# & .NET
+----------
+
+Q: What is async/await and why did you use it?
+Async/await lets you run I/O operations (like database calls) without blocking the thread. In my project, every
+repository method is async -- e.g. GetAllAsync() returns Task<IEnumerable<T>> -- so the server stays responsive
+while waiting on SQL Server.
+
+Q: What are nullable reference types?
+A C# feature (enabled in my .csproj) that makes the compiler warn you when you might dereference a null. For example,
+IWebHostEnvironment.WebRootPath can be null, which actually caused a bug in my project -- I had to add a
+null-coalescing fallback: WebRootPath ?? Path.Combine(ContentRootPath, "wwwroot").
+
+Q: What is the difference between IEnumerable and IQueryable?
+IEnumerable executes the query in memory. IQueryable defers execution and translates to SQL. In my repositories I use
+ToListAsync() which executes the EF Core IQueryable against the database and returns an IEnumerable.
+
+
+BLAZOR SERVER
+--------------
+
+Q: How does Blazor Server work?
+Blazor Server runs C# on the server and communicates with the browser over a SignalR WebSocket connection. Every user
+interaction (button click, form input) sends a message to the server, which processes it, updates the component state,
+and sends a diff back to the DOM. There is no JavaScript required for logic.
+
+Q: What's the difference between OnInitializedAsync and OnAfterRenderAsync?
+OnInitializedAsync runs before the component renders -- good for setting up state. OnAfterRenderAsync runs after the
+browser has rendered. In my project I load database data in OnAfterRenderAsync(firstRender) to show a loading spinner
+first, then populate the data and call StateHasChanged() to trigger a re-render.
+
+Q: When would you use StateHasChanged()?
+When you update state outside of a normal event handler -- for example after an async operation completes -- Blazor
+doesn't automatically know to re-render, so you call StateHasChanged() manually. I use this after loading cart or
+order data.
+
+Q: What are cascading parameters?
+A way to pass data down a component tree without prop-drilling. In my OrderList page I use
+[CascadingParameter] public Task<AuthenticationState>? AuthenticationState to get the current user's auth state from
+the root CascadingAuthenticationState service registered in Program.cs.
+
+
+REPOSITORY PATTERN & ARCHITECTURE
+-----------------------------------
+
+Q: Why did you use the Repository Pattern?
+It decouples the business logic from the data access layer. My components depend on ICategoryRepository, not
+CategoryRepository directly. This means I could swap out EF Core for a different ORM, or mock the repository in
+tests, without touching my UI components.
+
+Q: What's the difference between the Repository Pattern and direct DbContext usage?
+Using DbContext directly in components creates tight coupling -- your UI knows about SQL. The repository wraps the
+DbContext and exposes only the operations the application needs (e.g. GetAllAsync, CreateAsync), keeping the UI
+layer clean.
+
+Q: What is Dependency Injection and how did you use it?
+DI is a design pattern where dependencies are provided to a class rather than created inside it. In Program.cs I
+register services like builder.Services.AddScoped<IOrderRepository, OrderRepository>(). Then in Blazor components
+I use @inject IOrderRepository _orderRepository and ASP.NET Core resolves the concrete implementation automatically.
+
+Q: What does AddScoped mean vs AddSingleton vs AddTransient?
+- AddScoped   -- one instance per HTTP request/SignalR circuit. Used for repositories because they wrap DbContext
+                 which is also scoped.
+- AddSingleton -- one instance for the entire app lifetime. Used for IEmailSender in my project.
+- AddTransient -- a new instance every time it's requested. Good for lightweight, stateless services.
+
+
+ENTITY FRAMEWORK CORE
+-----------------------
+
+Q: What is Code-First development?
+You define your database schema using C# classes (models), and EF Core generates the SQL migration scripts from them.
+In my project, OrderHeader, Product, Category etc. are C# classes that map to database tables via ApplicationDbContext.
+
+Q: What is a migration?
+A migration is a snapshot of a schema change. When I added OrderHeader to the DbContext, I ran Add-Migration which
+generated a C# class describing the SQL changes, then Update-Database applied them to SQL Server.
+
+Q: What does .Include() do?
+It's EF Core's way of doing a SQL JOIN -- it eagerly loads related entities. In my OrderRepository.GetAsync() I use
+.Include(u => u.OrderDetails) to load the order's line items in the same query, otherwise OrderDetails would be null.
+
+Q: What is data seeding?
+Pre-populating the database with initial data. In my ApplicationDbContext.OnModelCreating() I seed three default
+categories (Coffee, Matcha, Pastries) using HasData(), so they exist as soon as migrations run.
+
+
+AUTHENTICATION & SECURITY
+---------------------------
+
+Q: How does role-based authorization work in your app?
+ASP.NET Core Identity stores roles in the database. I have two roles: Admin and Customer. In components I check
+user.IsInRole(SD.Role_Admin) to conditionally show admin controls (like order status buttons). Pages use
+@attribute [Authorize] to block unauthenticated access entirely.
+
+Q: What are claims?
+Claims are key-value pairs attached to an identity -- like nameidentifier (user ID) or email. In my cart page I
+extract the user's ID with user.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value to scope cart items to
+the logged-in user.
+
+Q: What is an antiforgery token?
+A security measure against Cross-Site Request Forgery (CSRF) attacks. When a form is submitted, ASP.NET Core
+validates a hidden token to confirm the request came from your site, not a malicious third party. It's applied
+globally via app.UseAntiforgery() in my Program.cs.
+
+
+GENERAL SOFTWARE ENGINEERING
+------------------------------
+
+Q: How did you handle file uploads?
+Blazor's InputFile component gives me an InputFileChangeEventArgs. I generate a GUID-based filename to avoid
+collisions, check if the target directory exists (creating it if not), then stream the file to disk using FileStream
+and CopyToAsync. The image URL is stored in the database as a relative path like /images/product/{guid}.jpg.
+
+Q: What design patterns did you use beyond Repository?
+- Decorator       -- I extended IJSRuntime with extension methods (ToastrSuccess, ToastrError) to wrap JS interop
+                     calls cleanly.
+- Constants class -- SD.cs centralizes magic strings like role names and order statuses so they're not scattered
+                     across the codebase.
+- Interface Segregation -- each repository has its own focused interface rather than one giant data-access interface.
+
+Q: How would you improve this project?
+- Add unit tests with mocked repositories
+- Implement the Stripe payment integration (scaffolded but commented out)
+- Add a PaymentService as a proper service layer between components and Stripe
+- Use ILogger for structured logging
+- Add pagination to product/order lists for scalability
+
+
+THINGS TO KNOW COLD
+---------------------
+Project name  : CafeApp
+Language      : C# (.NET 9)
+Frontend      : Blazor Server
+Database      : SQL Server with EF Core
+Pattern       : Repository Pattern + Dependency Injection
+Auth          : ASP.NET Core Identity, role-based
+Biggest challenge : Fixing WebRootPath null bug; moving HTTPS redirect out of dev environment

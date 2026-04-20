@@ -111,7 +111,9 @@ else
 
     protected override Task OnInitializedAsync()
     {
-        _directoryPath = Path.Combine(_webHostEnvironment.WebRootPath, "images", "product");
+        var webRoot = _webHostEnvironment.WebRootPath
+            ?? Path.Combine(_webHostEnvironment.ContentRootPath, "wwwroot");
+        _directoryPath = Path.Combine(webRoot, "images", "product");
         return base.OnInitializedAsync();
     }
 
